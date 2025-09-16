@@ -2,40 +2,56 @@
 import subprocess
 import sys
 import os
+import requests
 
 # --- Configuration ---
-# We will use a smaller, faster model to maximize our chances of success on low-spec hardware
 MODEL_URL = "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q3_K_S.gguf"
 MODEL_FILENAME = "tinyllama-1.1b-chat-v1.0.Q3_K_S.gguf"
-MODEL_DIR = "models"
 
-# --- Main Script ---
+# This path goes UP one level from src-backend to the project root, then into 'models'
+# This ensures it matches the path in llm_interface.py
+MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
+MODEL_PATH = os.path.join(MODEL_DIR, MODEL_FILENAME)
+
+REQUIREMENTS_FILE = "requirements.txt"
+
 def run_command(command):
-    """Runs a command and checks for errors."""
-    subprocess.run(command, check=True)
+    """Runs a command and checks for errors, exiting if it fails."""
+    try:
+        subprocess.run(command, check=True, text=True, capture_output=True)
+    except subprocess.CalledProcessError as e:
+        print("--- ERROR ---")
+        print(f"Command failed: {' '.join(command)}")
+        print(f"Stderr: {e.stderr}")
+        print(f"Stdout: {e.stdout}")
+        sys.exit(1)
 
-print("--- Bootstrapping Engelbert Kernel (Pythonic Engine) ---")
+print("--- Bootstrapping Engelbert Kernel ---")
 
-# 1. Install Python dependencies
-print("📦 Installing Python packages...")
-run_command([sys.executable, "-m", "pip", "install", "fastapi", "uvicorn[standard]", "pydantic", "httpx", "requests"])
-# This is the magic: pip will install the correct version for your CPU
-run_command([sys.executable, "-m", "pip", "install", "llama-cpp-python"])
+# 1. Install Python dependencies from our official list
+print(f"📦 Installing Python packages from {REQUIREMENTS_FILE}...")
+run_command([sys.executable, "-m", "pip", "install", "-r", REQUIREMENTS_FILE])
+print("✅ Dependencies installed.")
 
 # 2. Download the model
-print("🧠 Downloading language model...")
+print("\n🧠 Checking for language model...")
 os.makedirs(MODEL_DIR, exist_ok=True)
-model_path = os.path.join(MODEL_DIR, MODEL_FILENAME)
 
-if not os.path.exists(model_path):
-    print(f"Downloading {MODEL_FILENAME} (~600MB)...")
-    # Using requests for a more robust download
-    import requests
-    with requests.get(MODEL_URL, stream=True) as r:
-        r.raise_for_status()
-        with open(model_path, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
+if not os.path.exists(MODEL_PATH):
+    print(f"Downloading {MODEL_FILENAME} (~600MB)... This may take a few minutes.")
+    try:
+        with requests.get(MODEL_URL, stream=True) as r:
+            r.raise_for_status()
+            with open(MODEL_PATH, 'wb') as f:
+                content_length = r.headers.get('content-length')
+                total_length = int(content_length) if content_length is not None else None
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+        print(f"✅ Model downloaded successfully to {MODEL_PATH}")
+    except requests.exceptions.RequestException as e:
+        print(f"--- ERROR ---")
+        print(f"Failed to download model: {e}")
+        sys.exit(1)
 else:
     print(f"✅ Model '{MODEL_FILENAME}' already exists.")
 

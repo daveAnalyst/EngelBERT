@@ -3,3 +3,7 @@ uvicorn[standard]
 pydantic
 httpx
 llama-cpp-python
+python-multipart
+requests
+lancedb
+sentence-transformers
