@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[15]:
-
-
 from ollama import chat
 from ollama import ChatResponse
 from ollama import AsyncClient
@@ -13,23 +7,6 @@ import base64
 from transformers import pipeline
 from markdown import markdown
 from PIL import Image
-import os
-import asyncio
-
-# In[20]:
-def image_to_base64(image_path: str) -> str: 
-    """Read an image file and converts it to a base64 string."""
-    try: 
-        #Read Image and convert to base64, so that olama can read it. 
-        with Image.open(image_path) as img: 
-            buffered = io.BytesIO() 
-            img.save(buffered, format="JPEG")
-            img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
-            return img_str
-    except FileNotFoundError: 
-        return f"Error: Image file not found at {image_path}"
-    except Exception as e: 
-        return f"Error processing image: {e}"
 
 def create_response(prompt: str, system_prompt: str, image_path=None, model='gemma3'): 
     
@@ -77,9 +54,3 @@ def create_response(prompt: str, system_prompt: str, image_path=None, model='gem
 
     response = chat(model=model, messages = messages)
     return response
-
-
-
-
-
-
