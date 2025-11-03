@@ -6,4 +6,5 @@ llama-cpp-python
 python-multipart
 requests
 lancedb
+pandas
 sentence-transformers

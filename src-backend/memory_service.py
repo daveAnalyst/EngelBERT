@@ -1,45 +1,59 @@
 # src-backend/memory_service.py
 import sqlite3
 import os
+import lancedb
 from typing import List, Tuple, Optional
+from sentence_transformers import SentenceTransformer
+import pandas as pd
 
-# This robust pathing ensures the database is always created next to this file
+# --- Database Paths ---
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_FILE = "wise_memory.db"
 DB_PATH = os.path.join(SCRIPT_DIR, DB_FILE)
+LANCEDB_DIR = os.path.join(SCRIPT_DIR, "lancedb")
 
 class MemoryService:
     """
     The single interface for interacting with the Sovereign Second Brain's memory.
+    Manages both SQLite (Episodic) and LanceDB (Semantic).
     """
-    def __init__(self, db_path: str = DB_PATH):
-        self.db_path = db_path
-        # This flag tells Python to allow the connection to be used by different parts of our app
-        self._conn = sqlite3.connect(self.db_path, check_same_thread=False)
-        print("MemoryService initialized and connected to SQLite.")
+
+    def __init__(self, db_path: str = DB_PATH, lancedb_dir: str = LANCEDB_DIR):
+        # SQLite Connection
+        self._conn = sqlite3.connect(db_path, check_same_thread=False)
+        # LanceDB Connection
+        self._lancedb_client = lancedb.connect(lancedb_dir)
+        self._semantic_table = self._lancedb_client.open_table("semantic_memory")
+        # Load Embedding Model
+        print("🧠 MemoryService: Loading embedding model (all-MiniLM-L6-v2)...")
+        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        print("✅ MemoryService is fully initialized.")
 
     def close_connection(self):
-        """Closes the SQLite database connection."""
-        if self._conn:
-            self._conn.close()
-            print("SQLite connection closed.")
+        if self._conn: self._conn.close()
 
-    def add_log_entry(self, session_id: str, actor: str, content: str, active_lens: str = None, metadata_json: str = None):
-        """Adds a new turn from a conversation to the conversation_log table."""
-        sql = ''' INSERT INTO conversation_log(session_id, actor, content, active_lens, metadata_json)
-                  VALUES(?,?,?,?,?) '''
+    # --- Episodic Memory (SQLite) ---
+    def add_log_entry(self, session_id: str, actor: str, content: str, active_lens: Optional[str] = None, metadata_json: Optional[str] = None):
+        sql = ''' INSERT INTO conversation_log(session_id, actor, content, active_lens, metadata_json) VALUES(?,?,?,?,?) '''
         try:
             cursor = self._conn.cursor()
             cursor.execute(sql, (session_id, actor, content, active_lens, metadata_json))
             self._conn.commit()
-            print(f"Added log entry: {actor} - '{content[:20]}...'")
             return cursor.lastrowid
         except sqlite3.Error as e:
-            print(f"Failed to add log entry: {e}")
-            return None
+            print(f"❌ Failed to add log entry: {e}")
 
+     # --- THE FINAL, CORRECTED VERSION ---
     def get_recent_history(self, session_id: str, limit: int = 10) -> List[Tuple]:
-        """Retrieves the most recent turns for a given session_id."""
+        """
+        Retrieves the most recent turns for a given session_id,
+        and returns them in the correct chronological order (oldest to newest).
+        """
+        if not self._conn:
+            print("❌ Error: No database connection.")
+            return []
+
+        # This SQL correctly gets the N most recent messages, with the newest one first.
         sql = """ SELECT actor, content 
                   FROM conversation_log 
                   WHERE session_id = ? 
@@ -49,7 +63,48 @@ class MemoryService:
             cursor = self._conn.cursor()
             cursor.execute(sql, (session_id, limit))
             rows = cursor.fetchall()
+            
+            # This is the CRUCIAL FIX: we reverse the list in Python
+            # so it's in the correct chronological order for the AI to read.
             return list(reversed(rows))
+        
         except sqlite3.Error as e:
-            print(f"Failed to get history: {e}")
+            print(f"❌ Failed to get history: {e}")
+            return []
+
+    # --- Semantic Memory (LanceDB) ---
+    def process_and_store_document(self, content: str, source_id: str):
+        print(f"🧠 Processing document from source: {source_id}...")
+        try:
+            existing = self._semantic_table.search().where(f"source_id = '{source_id}'").limit(1).to_pandas()
+            if not existing.empty:
+                self._semantic_table.delete(f"source_id = '{source_id}'")
+                print(f"🧹 Cleaned up old entries for {source_id}.")
+        except Exception as e:
+            print(f"ℹ️ Could not clean up old entries (this is normal on first run): {e}")
+
+        chunks = [chunk for chunk in content.split('\n') if chunk.strip() and len(chunk) > 10]
+        if not chunks:
+            print(f"⚠️ Document '{source_id}' is empty or has no content to process.")
+            return
+
+        print(f"Split document into {len(chunks)} chunks. Generating embeddings...")
+        embeddings = self.embedding_model.encode(chunks)
+        
+        data_to_add = [{"vector": embeddings[i], "text": chunk_text, "source_id": source_id} for i, chunk_text in enumerate(chunks)]
+        
+        try:
+            self._semantic_table.add(data_to_add)
+            print(f"✅ Successfully added {len(chunks)} new chunks for {source_id}.")
+        except Exception as e:
+            print(f"❌ Failed to add data to LanceDB: {e}")
+
+    def find_relevant_chunks(self, query_text: str, top_k: int = 3) -> List[dict]:
+        print(f"🔍 Performing semantic search for: '{query_text[:30]}...'")
+        try:
+            query_embedding = self.embedding_model.encode(query_text)
+            results = self._semantic_table.search(query_embedding).limit(top_k).to_pandas()
+            return results.to_dict('records')
+        except Exception as e:
+            print(f"❌ Failed to perform semantic search: {e}")
             return []

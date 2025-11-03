@@ -26,6 +26,10 @@ async def lifespan(app: FastAPI):
     memory_service = MemoryService()
     print("✅ Memory Service is online.")
 
+     # NOW, initialize the LLM clients
+    await initialize_llm_clients() 
+    print("✅ LLM Interface is online.")
+
     yield # --- Application runs here ---
 
     print("--- Shutting down Engelbert Kernel ---")

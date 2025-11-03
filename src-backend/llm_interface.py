@@ -5,33 +5,34 @@ from typing import List, Tuple
 from llama_cpp import Llama
 import httpx
 
-# --- Import our new Agent classes ---
+# --- Core Engelbert Services ---
 from agents.ollama_client import OllamaClient
 from agents.vibe_detector import VibeDetector
+from memory_service import MemoryService
 
-# --- Global State for our AI Models ---
-# This is a best practice for managing resources in a FastAPI app
-# They will be initialized once during the application's lifespan.
+# --- Global State for our AI Models & Services ---
 llm_local: Llama | None = None
 ollama_client: OllamaClient | None = None
 vibe_detector: VibeDetector | None = None
 ollama_is_available: bool = False
+memory_service: MemoryService | None = None
 
 # --- Configuration ---
 LOCAL_MODEL_FILENAME = "tinyllama-1.1b-chat-v1.0.Q3_K_S.gguf"
-# Assumes a 'models' folder in the root of your project, outside src-backend
 MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models")
 LOCAL_MODEL_PATH = os.path.join(MODELS_DIR, LOCAL_MODEL_FILENAME)
 
 
 # --- Lifespan Functions (to be called from main.py) ---
-async def initialize_llm_clients():
+async def initialize_llm_clients(mem_service: MemoryService):
     """
     Called once when the application starts.
-    Loads the local Llama model and probes for the advanced Ollama service.
+    Loads models and accepts the memory_service instance.
     """
-    global llm_local, ollama_client, vibe_detector, ollama_is_available
-
+    global llm_local, ollama_client, vibe_detector, ollama_is_available, memory_service
+    
+    memory_service = mem_service
+    
     # 1. ALWAYS load the local text engine.
     if os.path.exists(LOCAL_MODEL_PATH):
         print(f"🧠 Loading local 'Language Brain': {LOCAL_MODEL_FILENAME}...")
@@ -65,57 +66,84 @@ async def close_llm_clients():
     print("LLM clients closed.")
 
 
-# --- THE UPGRADED CORE FUNCTION ---
+# --- THE FINAL, RAG-ENABLED CORE FUNCTION ---
 async def get_llm_response(prompt: str, image_bytes: bytes | None, history: List[Tuple]) -> str:
     """
     The single point of entry for getting a response from an LLM.
-    Acts as the intelligent router for our "Progressive Sovereignty" architecture.
+    It performs a semantic search to augment the prompt with relevant context.
     """
-    # --- Intelligent Router Logic ---
+    global memory_service
+    if not memory_service:
+        return "Error: Memory service is not available in the LLM interface."
+
+    # --- Step 1: AUGMENT with Semantic Memory (The RAG Step) ---
+    print("🧠 Augmenting prompt with semantic memory...")
+    relevant_chunks = memory_service.find_relevant_chunks(prompt, top_k=3)
+    
+    context_str = ""
+    if relevant_chunks:
+        print(f"✅ Found {len(relevant_chunks)} relevant chunks from the Second Brain.")
+        context_sources = list(set([chunk['source_id'] for chunk in relevant_chunks]))
+        context_str = "--- Relevant Context from your Second Brain ---\n"
+        for chunk in relevant_chunks:
+            context_str += f"- {chunk['text']}\n"
+        context_str += f"Sources: {', '.join(context_sources)}\n----------------------------------------\n\n"
+    else:
+        print("ℹ️ No highly relevant chunks found in the Second Brain for this query.")
+    
+    # --- Step 2: Intelligent Router Logic ---
+
+    # --- ROUTE 1: Multimodal requests (Ollama) ---
     if image_bytes:
-        # ALL multimodal requests go to the Ollama brain
         if not ollama_client or not ollama_is_available:
             return "Error: Vision features are not enabled. Please ensure Ollama is running."
         
         print("🧠 Routing to Advanced Brain for multimodal input...")
         img_base64 = base64.b64encode(image_bytes).decode('utf-8')
         
-        # We will build a more sophisticated history formatter later
-        # For now, we just use the latest prompt and image
-        messages = [{'role': 'user', 'content': prompt, 'images': [img_base64]}]
+        # We add the RAG context to the multimodal prompt as well
+        final_prompt = f"{context_str}User query: {prompt}"
+        messages = [{'role': 'user', 'content': final_prompt, 'images': [img_base64]}]
         
-        response = await ollama_client.chat(
-            model='llava:latest',
-            messages=messages
-        )
+        response = await ollama_client.chat(model='llava:latest', messages=messages)
         return response['message']['content']
 
+    # --- ROUTE 2: Advanced text requests (Ollama) ---
     elif ollama_is_available and vibe_detector and ollama_client:
-        # If Ollama is available, use the advanced conversational brain for text too
         print("🧠 Routing to Advanced Brain for text input...")
         vibe = await vibe_detector.classify(prompt)
         
-        # Format history for Ollama
         messages = []
+        # We prepend our RAG context as the first "system" message for Ollama
+        if context_str:
+            messages.append({'role': 'system', 'content': context_str})
+            
         for actor, content in history:
-            # We assume the last turn is the current user prompt, which we'll add now
             if actor != 'user' or content != prompt:
                 messages.append({'role': actor if actor == 'user' else 'assistant', 'content': content})
         
         messages.append({'role': 'user', 'content': f"({vibe.upper()} VIBE) {prompt}"})
         
-        response = await ollama_client.chat(model='llama3:latest', messages=messages)
+        response = await ollama_client.send_chat(model='llama3:latest', messages=messages)
         return response['message']['content']
     
+    # --- ROUTE 3: Sovereign text requests (Local Llama) ---
     else:
-        # Fallback to the simple, sovereign, local text brain
         if not llm_local:
             return "Error: Local text model is not available."
             
-        print("🧠 Routing to Sovereign Language Brain...")
-        # Simple history formatting for the local model
+        print("🧠 Routing to Sovereign Language Brain with augmented context...")
         history_str = "\n".join([f"<|{turn[0]}|>\n{turn[1]}" for turn in history])
-        prompt_template = f"<|system|>\nYou are a helpful AI assistant named Wise.\n{history_str}<|user|>\n{prompt}\n<|assistant|>\n"
         
-        output = llm_local(prompt_template, max_tokens=300, stop=["<|user|>", "<|system|>"])
+        prompt_template = (
+            f"<|system|>\n"
+            f"You are a helpful AI assistant named Wise. Your goal is to be a thought partner. "
+            f"Use the following context from the user's Second Brain to provide a more relevant and insightful answer. "
+            f"If the context is not relevant, you can ignore it.\n\n"
+            f"{context_str}"
+            f"Here is the recent conversation history:\n"
+            f"{history_str}<|user|>\n{prompt}\n<|assistant|>\n"
+        )
+        
+        output = llm_local(prompt_template, max_tokens=400, stop=["<|user|>", "<|system|>"])
         return output["choices"][0]["text"].strip()

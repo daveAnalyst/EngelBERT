@@ -272,3 +272,11 @@ src-backend/models/
 
 # Ignore Python virtual environments
 src-backend/venv/
+
+# Ignore local models
+models/
+
+# Ignore local databases and caches
+src-backend/wise_memory.db
+src-backend/lancedb/
+__pycache__/
