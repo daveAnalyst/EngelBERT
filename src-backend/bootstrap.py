@@ -5,8 +5,9 @@ import os
 import requests
 
 # --- Configuration ---
-MODEL_URL = "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q3_K_S.gguf"
-MODEL_FILENAME = "tinyllama-1.1b-chat-v1.0.Q3_K_S.gguf"
+# Llama-3.2-1B-Instruct (4-bit Quantized GGUF) - ~700MB
+MODEL_URL = "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf"
+MODEL_FILENAME = "Llama-3.2-1B-Instruct-Q4_K_M.gguf"
 
 # This path goes UP one level from src-backend to the project root, then into 'models'
 # This ensures it matches the path in llm_interface.py

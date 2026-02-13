@@ -1,4 +1,5 @@
 # src-backend/main.py
+import psutil 
 import uuid
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,6 +12,30 @@ from memory_service import MemoryService
 
 # --- Global State ---
 memory_service = None
+
+# added can dream function
+def can_dream() -> bool:
+    """
+    Adaptive Scheduler: Returns True only if the system has resources to spare.
+    Prevents the background worker from crashing the user's laptop.
+    """
+    try:
+        # 1. Check RAM (If usage > 80%, STOP)
+        ram_percent = psutil.virtual_memory().percent
+        if ram_percent > 80:
+            print(f"💤 Dreaming paused: High RAM usage ({ram_percent}%)")
+            return False
+
+        # 2. Check CPU (If usage > 70%, STOP)
+        cpu_percent = psutil.cpu_percent(interval=0.1)
+        if cpu_percent > 70:
+            print(f"💤 Dreaming paused: High CPU usage ({cpu_percent}%)")
+            return False
+            
+        return True
+    except Exception as e:
+        print(f"⚠️ Scheduler Error: {e}")
+        return False # Fail safe
 
 # --- FastAPI Lifespan Manager ---
 @asynccontextmanager

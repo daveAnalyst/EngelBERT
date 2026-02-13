@@ -7,4 +7,5 @@ python-multipart
 requests
 lancedb
 pandas
-sentence-transformers
+sentence-transformerspsutil
+tf-keras

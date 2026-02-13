@@ -18,7 +18,7 @@ ollama_is_available: bool = False
 memory_service: MemoryService | None = None
 
 # --- Configuration ---
-LOCAL_MODEL_FILENAME = "tinyllama-1.1b-chat-v1.0.Q3_K_S.gguf"
+LOCAL_MODEL_FILENAME = "Llama-3.2-1B-Instruct-Q4_K_M.gguf"
 MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models")
 LOCAL_MODEL_PATH = os.path.join(MODELS_DIR, LOCAL_MODEL_FILENAME)
 
@@ -131,19 +131,31 @@ async def get_llm_response(prompt: str, image_bytes: bytes | None, history: List
     else:
         if not llm_local:
             return "Error: Local text model is not available."
-            
-        print("🧠 Routing to Sovereign Language Brain with augmented context...")
-        history_str = "\n".join([f"<|{turn[0]}|>\n{turn[1]}" for turn in history])
+        print("🧠 Routing to Sovereign Language Brain (Llama 3.2) with context...")
+    
+    # Llama 3 format: <|start_header_id|>role<|end_header_id|>\n\ntext<|eot_id|>
+    
+    system_prompt = (
+        "You are Wise, a helpful AI assistant. "
+        "Use the provided context to answer the user's question. "
+        "If the context isn't relevant, ignore it."
+    )
+    
+    # Build the context block
+    full_context = ""
+    if context_str:
+        full_context = f"Context from Second Brain:\n{context_str}\n\n"
+
+    # Construct the Llama 3 Prompt
+    prompt_str = f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system_prompt}<|eot_id|>"
+    
+    # Add History
+    for actor, content in history:
+        role = "assistant" if actor == "ai" else "user"
+        prompt_str += f"<|start_header_id|>{role}<|end_header_id|>\n\n{content}<|eot_id|>"
         
-        prompt_template = (
-            f"<|system|>\n"
-            f"You are a helpful AI assistant named Wise. Your goal is to be a thought partner. "
-            f"Use the following context from the user's Second Brain to provide a more relevant and insightful answer. "
-            f"If the context is not relevant, you can ignore it.\n\n"
-            f"{context_str}"
-            f"Here is the recent conversation history:\n"
-            f"{history_str}<|user|>\n{prompt}\n<|assistant|>\n"
-        )
-        
-        output = llm_local(prompt_template, max_tokens=400, stop=["<|user|>", "<|system|>"])
-        return output["choices"][0]["text"].strip()
+    # Add Current Turn (with RAG context injected)
+    prompt_str += f"<|start_header_id|>user<|end_header_id|>\n\n{full_context}{prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+    
+    output = llm_local(prompt_str, max_tokens=512, stop=["<|eot_id|>"])
+    return output["choices"][0]["text"].strip()
