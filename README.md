@@ -1,204 +1,87 @@
-# EngelBERT Oparating System
 
-<p align="center">
-  <img src="media/engelbert banner.png" alt="EngelBERT OS Banner"/>
-</p>
+```markdown
+# EngelBERT OS (Project Wise)
+**The Sovereign Personal Semantic Model (PSM-1)**
 
-<p align="center">
-  <strong>The Thinking Operating System.</strong><br>
-  <em>Your Data, Model, Weights, Insights Anywhere.</em>
-</p>
+![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg) ![Status](https://img.shields.io/badge/Status-Sprint_2_Active-green) ![Architecture](https://img.shields.io/badge/Architecture-Local_First-orange)
 
-<p align="center">
-    <a href="https://github.com/daveAnalyst/EngelBERT/blob/main/LICENSE">
-        <img src="https://img.shields.io/badge/License-Apache--2.0-blue.svg" alt="License: Apache-2.0">
-    </a>
-    <a href="https://www.kaggle.com/competitions/google-gemma-3n-impact-challenge">
-        <img src="https://img.shields.io/badge/Kaggle-Gemma%203n%20Challenge-20BEFF.svg" alt="Kaggle Challenge">
-    </a>
-    <a href="https://github.com/daveAnalyst/EngelBERT/releases/latest">
-        <img src="https://img.shields.io/badge/Release-V1.0%20MVP-brightgreen.svg" alt="Release: V1.0 MVP">
-    </a>
-</p>
+> "The Butler frees your time. The Lab Partner amplifies your mind."
 
----
+## 📜 The Mission
+We are building **Cognitive Augmentation** software that respects **Data Sovereignty**.
+Current AI tools (ChatGPT, Perplexity) are efficient "Butlers"—they do tasks for you. We are building a "Lab Partner"—an active agent that thinks *with* you, discovering non-obvious connections in your private knowledge base without your data ever leaving the device.
 
-## 🚀 Quick Start
+## 🏗️ The Architecture (Sprint 2)
+EngelBERT is not a wrapper. It is a **Local Operating System for Intelligence**.
 
-| Option | Description | Best For |
-|--------|-------------|----------|
-| **[🌐 Live Demo](https://engel-bert.vercel.app/)** | Full-featured web experience | First-time users |
-| **[💻 Desktop App](https://github.com/daveAnalyst/EngelBERT/releases/latest)** | Sovereign, offline-first | Privacy-conscious users |
+```mermaid
+graph TD
+    A[User / Frontend] -->|Tauri/Rust| B(Sovereign Kernel)
+    B -->|FastAPI Bridge| C{Insight Engine}
+    C -->|Retrieval| D[LanceDB Vector Store]
+    C -->|Inference| E[Llama 3.2 1B / Qwen 2.5]
+    C -->|Optimization| F[DPO Feedback Loop]
+    E -->|Output| A
+```
 
----
+### The Tech Stack
+*   **Frontend:** Tauri (Rust + React/TS) - *Lightweight, Native Shell.*
+*   **Kernel:** Python 3.12 + FastAPI - *The Orchestrator.*
+*   **Memory:** LanceDB - *Serverless Vector Storage.*
+*   **Model Engine:** `llama-cpp-python` - *Running Quantized Llama 3.2 1B (CPU Optimized).*
+*   **Alignment:** DPO (Direct Preference Optimization) - *Learning user taste via local RLHF.*
 
-## The Problem We're Solving
+## 🧩 Key Innovations
 
-Today's AI makes you **faster**, but not **smarter**. It's an "AI Butler" that does tasks *for* you instead of thinking *with* you.
+### 1. The Insight Engine (PSM-1)
+Most "Second Brains" are passive storage. EngelBERT is active.
+*   **The Dream Cycle:** A background daemon (`dream_cycle_worker.py`) that runs while the computer is idle.
+*   **The Logic:** It scans your past notes, identifies latent connections between disparate topics (e.g., "Biology" and "Architecture"), and presents them as insights.
+*   **The Moat:** It learns from your feedback (Save/Dismiss) to maximize **PIV (Personal Insight Value)**.
 
-> **The Market's Vision:** *"Hey AI, join my meetings, stay muted, and just say 'nothing from my end' when asked."* — Aravind Srinivas, CEO of Perplexity
+### 2. Progressive Sovereignty
+*   **Stage 1 (Now):** Sovereign Desktop. Runs locally on consumer hardware (Mac M1/M2/M3, Windows).
+*   **Stage 2:** Sage Stick. Portable intelligence on a USB drive.
+*   **Stage 3:** Wise Orb. Ambient, screenless intelligence.
 
-**Our Vision:** What if AI didn't just attend your meeting, but actively cross-referenced the discussion with your private knowledge base and alerted you: *"They're debating the Q4 roadmap, but it conflicts with engineering constraints you documented last week. You might want to speak up."*
+## 🚀 Getting Started (Developer Setup)
 
-**The Butler frees your time. The Lab Partner amplifies your impact.**
+### Prerequisites
+*   Python 3.10+
+*   Node.js & npm
+*   Rust (for Tauri)
 
----
+### Installation
+1.  **Clone the Repo**
+    ```bash
+    git clone https://github.com/daveAnalyst/EngelBERT.git
+    cd EngelBERT
+    ```
 
-## Meet Wise: Your First AI Lab Partner
+2.  **Boot the Kernel (Backend)**
+    ```bash
+    cd src-backend
+    pip install -r requirements.txt
+    python bootstrap.py  # Downloads Llama-3.2-1B-Instruct-GGUF
+    ```
 
-**Wise** is the flagship application of EngelBERT OS—an Integrated Thinking Environment that augments your intelligence rather than replacing it.
+3.  **Launch the Shell (Frontend)**
+    ```bash
+    # Open a new terminal
+    npm install
+    npm run tauri dev
+    ```
 
-### How Wise Works: A Student's Story
+## 🤝 Contributing
+We are currently in **Sprint 2: The Insight Engine**.
+Check the [Issues Tab](https://github.com/daveAnalyst/EngelBERT/issues) for high-priority bounties.
 
-Meet Alex, who's struggling with scattered lecture notes and complex connections:
+*   **Engineering:** Focus on `[SYSTEMS]` and `[BACKEND]` tickets (Tauri/Python bridge).
+*   **Research:** Focus on `[ML]` tickets (DPO Implementation).
 
-1. **📥 Ingest**: Alex drags messy PDFs and class notes into Wise's local "Second Brain"
-2. **🧠 Augment**: He activates the **Scholar Lens** 🎓 and asks: *"Create a cheat sheet on French Revolution causes"*
-3. **⚡ Insight**: Wise proactively surfaces: *"Your Enlightenment notes connect strongly with American Revolutionary Ideas in Chapter 4. Explore this link?"*
-
-<p align="center">
-  <img src="docs/media/wise-screenshot.png" alt="Wise Application Screenshot" width="80%">
-</p>
-
----
-
-## Core Innovations
-
-### 🏛️ Progressive Sovereignty
-- **Any Hardware**: Fast, text-only experience on basic machines via `llama-cpp-python`
-- **Enhanced Locally**: Unlocks full `Gemma 3n` multimodal features when Ollama is detected
-- **Your Data**: 100% offline-capable. No cloud dependencies for core functionality
-
-### 🔍 Cognitive Lenses
-Dynamic reasoning modes inspired by the human mind that transform how the AI thinks:
-- **🎓 Scholar**: Analytical, research-focused
-- **🎨 Muse**: Creative, exploratory
-- **🔧 Reflective**: Inspired by CBT therapy- A FINETUNED gemma3n for metacognition
-
-Powered by our `VibeDetector` agent that automatically knows and adapts to your intent.
-
-### 🌐 Personal Ontology
-Your private, on-device knowledge graph that enables:
-- **Proactive Insights**: AI discovers non-obvious connections without being asked
-- **Context Awareness**: Every response is informed by your personal knowledge base
-- **True Privacy**: Your thoughts never leave your device
-
----
-
-## The Evolution: From Tool to Ambient Intelligence
-
-**Wise is just the beginning.** We're building toward a new Post GUI computing paradigm: Where Man and Machine have true ptnership
-
-| Phase | Product | Vision |
-|-------|---------|--------|
-| **Today** | 💻 **Sovereign Desktop** | Powerful local multimodl AI-system that proves privacy and capability can coexist |
-| **Tomorrow** | 💾 **Sage Stick** | Zero-dependency portable intelligence on a flash drive |
-| **Future** | 📻 **Wise Orb** | Screenless, voice-first ambient AI that frees you from screens |
+## 📜 License
+Apache-2.0. Open Source and Sovereign.
 
 ---
-
-## Why EngelBERT Matters
-
-### For Individuals
-- **True Ownership**: Your data stays with you, always
-- **Enhanced Thinking**: AI that makes you smarter, not more dependent
-- **Progressive Enhancement**: Works on any hardware, gets better with better hardware
-
-### For Organizations
-- **Data Sovereignty**: No vendor lock-in or cloud dependencies
-- **Customizable Intelligence**: Adapt reasoning modes to your team's needs
-- **Future-Proof**: Model-agnostic architecture works with any AI backend
-
----
-
-## Getting Started
-
-### Option 1: Live Web Demo (Recommended)
-Experience the full power of Wise with our cloud-hosted `Gemma 3n` backend:
-
-**[🚀 Launch Live Demo](https://engel-bert.vercel.app/)**
-
-### Option 2: Sovereign Desktop App
-For the full privacy experience:
-
-1. **Download**: Get the latest release from our [Releases page](https://github.com/daveAnalyst/EngelBERT/releases/latest)
-2. **Start Kernel**: Navigate to `src-backend` and run `bootstrap.py` once to set up dependancies and load the backend then run `uvicorn main:app`
-3. **Launch Wise**: Run `Wise.exe` - it will connect to your local kernel automatically
-
-**System Requirements**: Windows (Linux/Mac coming soon)
-
----
-
-## Frequently Asked Questions
-
-<details>
-<summary><strong>What's the difference between EngelBERT and Wise?</strong></summary>
-<br>
-<strong>EngelBERT</strong> is the open-source operating system for augmented thinking—our long-term platform vision.
-<br><br>
-<strong>Wise</strong> is the first application built on EngelBERT—a concrete product you can download and use today.
-</details>
-
-<details>
-<summary><strong>How is this different from ChatGPT or Claude?</strong></summary>
-<br>
-Traditional AI chat interfaces are reactive—they wait for you to ask questions. Wise is <strong>proactive</strong>—it analyzes your knowledge base and surfaces insights you didn't know to look for. Plus, it works entirely offline with your private data.
-</details>
-
-<details>
-<summary><strong>Can I use other AI models?</strong></summary>
-<br>
-Yes! Our architecture is model-agnostic. While we showcase `Gemma 3n`, you can integrate any model available through Ollama or sny other thing using an APIs. Think of it as a smart orchestrator for your AI tools.
-</details>
-
-<details>
-<summary><strong>What does this cost?</strong></summary>
-<br>
-The core Wise desktop application is <strong>free and open-source forever</strong>. We believe private intelligence augmentation is a fundamental right, not a luxury.
-</details>
-
-<details>
-<summary><strong>What about mobile support?</strong></summary>
-<br>
-Our immediate focus is perfecting the desktop experience and launching the "Sage Stick" portable version. Mobile support is on our roadmap for 2025.
-</details>
-
-<details>
-<summary><strong>What is the "WiseNet" vision?</strong></summary>
-<br>
-This is our long-term vision for true, ambient intelligence. While a tool like BitChat enables sovereign human-to-human communication, WiseNet is a protocol for **AI-to-AI communication.**
-<br><br>
-It is a peer-to-peer, offline mesh network that allows your Wise instance to securely and privately talk to another user's Wise instance. Imagine being in a meeting where your AI can get context from your co-founder's AI in real-time, without ever touching the internet.
-<br><br>
-This is not just communication. This is **collaborative cognition.**
-</details>
-
----
-
-## The Team
-
-- **David Angaya** — CEO, Product & Architecture (Nairobi, Kenya 🇰🇪)
-- **Davin Dewanto** — CTO, AI & Backend (Berlin, Germany 🇩🇪)
-
----
-
-## Join the Movement
-
-|  |  |
-|---|---|
-| 🚀 **Early Access** | [Join the waitlist for the Sage Stick experience](https://tally.so/r/3q8PBG) |
-| 📖 **Learn More** | [Read our Vision](https://engel-bert.vercel.app/) |
-| 📄 **Research** | [View our Paper on Zenodo](https://doi.org/10.5281/zenodo.16020727) |& [Updated PDF](docs/Engelbert_V2.pdf) |
-| 💬 **Connect** | [Follow Updates](https://twitter.com/Omungala_dave) |
-
----
-
-<p align="center">
-  <strong>Project EngelBERT</strong> — Amplifying human intelligence, one thought at a time.
-</p>
-
-<p align="center">
-<a href="mailto:davidomungala3@gmail.com">Contact</a> · 
-<a href="https://twitter.com/Omungala_dave">Twitter</a> · 
-<a href="LICENSE">Apache-2.0 License</a>
-</p>
+*Built by Dave, Davin, JB, Bolaji, Alfa & Aritra.*
+```
