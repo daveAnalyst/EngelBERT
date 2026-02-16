@@ -108,3 +108,13 @@ class MemoryService:
         except Exception as e:
             print(f"❌ Failed to perform semantic search: {e}")
             return []
+    def log_insight(self, note_a: str, note_b: str, insight: str):
+        """Saves a generated insight to the log for the UI to fetch."""
+        # We store it in conversation_log with a special actor name "dreamer"
+        self.add_log_entry(
+            session_id="dream_cycle",
+            actor="dreamer",
+            content=insight,
+            metadata_json=f"Linked: {note_a[:20]}... <-> {note_b[:20]}..."
+        )
+        print("   💾 Insight saved to Episodic Memory.")

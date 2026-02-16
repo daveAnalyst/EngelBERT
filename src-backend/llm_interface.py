@@ -1,9 +1,9 @@
-# src-backend/llm_interface.py
 import os
 import base64
 from typing import List, Tuple
 from llama_cpp import Llama
 import httpx
+
 
 # --- Core Engelbert Services ---
 from agents.ollama_client import OllamaClient
@@ -132,30 +132,68 @@ async def get_llm_response(prompt: str, image_bytes: bytes | None, history: List
         if not llm_local:
             return "Error: Local text model is not available."
         print("🧠 Routing to Sovereign Language Brain (Llama 3.2) with context...")
-    
-    # Llama 3 format: <|start_header_id|>role<|end_header_id|>\n\ntext<|eot_id|>
-    
-    system_prompt = (
-        "You are Wise, a helpful AI assistant. "
-        "Use the provided context to answer the user's question. "
-        "If the context isn't relevant, ignore it."
-    )
-    
-    # Build the context block
-    full_context = ""
-    if context_str:
-        full_context = f"Context from Second Brain:\n{context_str}\n\n"
-
-    # Construct the Llama 3 Prompt
-    prompt_str = f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system_prompt}<|eot_id|>"
-    
-    # Add History
-    for actor, content in history:
-        role = "assistant" if actor == "ai" else "user"
-        prompt_str += f"<|start_header_id|>{role}<|end_header_id|>\n\n{content}<|eot_id|>"
         
-    # Add Current Turn (with RAG context injected)
-    prompt_str += f"<|start_header_id|>user<|end_header_id|>\n\n{full_context}{prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+        # Llama 3 format: <|start_header_id|>role<|end_header_id|>\n\ntext<|eot_id|>
+        system_prompt = (
+            "You are Wise, a helpful AI assistant. "
+            "Use the provided context to answer the user's question. "
+            "If the context isn't relevant, ignore it."
+        )
+        
+        # Build the context block
+        full_context = ""
+        if context_str:
+            full_context = f"Context from Second Brain:\n{context_str}\n\n"
+
+        # Construct the Llama 3 Prompt
+        prompt_str = f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system_prompt}<|eot_id|>"
+        
+        # Add History
+        for actor, content in history:
+            role = "assistant" if actor == "ai" else "user"
+            prompt_str += f"<|start_header_id|>{role}<|end_header_id|>\n\n{content}<|eot_id|>"
+            
+        # Add Current Turn (with RAG context injected)
+        prompt_str += f"<|start_header_id|>user<|end_header_id|>\n\n{full_context}{prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+        
+        output = llm_local(prompt_str, max_tokens=512, stop=["<|eot_id|>"])
+        return output["choices"][0]["text"].strip()
+
+# --- STANDALONE FUNCTION FOR THE DREAM WORKER ---
+def generate_insight(note_a: str, note_b: str) -> str:
+    """
+    Standalone function for the Dream Worker.
+    Loads the model (if not already loaded) and generates a synthesis.
+    """
+    global llm_local
     
-    output = llm_local(prompt_str, max_tokens=512, stop=["<|eot_id|>"])
-    return output["choices"][0]["text"].strip()
+    # 1. Ensure Model is Loaded (Since Worker might be a separate process)
+    if not llm_local:
+        if os.path.exists(LOCAL_MODEL_PATH):
+            print(f"🧠 Dream Worker loading model: {LOCAL_MODEL_FILENAME}...")
+            try:
+                # Load with lower context window to save RAM during dreaming
+                llm_local = Llama(model_path=LOCAL_MODEL_PATH, n_ctx=1024, n_gpu_layers=-1, verbose=False)
+            except Exception as e:
+                return f"Error loading model: {e}"
+        else:
+            return "Error: Model not found."
+
+    # 2. The Insight Prompt (Llama 3.2 System Prompt)
+    prompt = (
+        f"<|start_header_id|>system<|end_header_id|>\n\n"
+        f"You are an Insight Engine. Your goal is to find non-obvious connections between two pieces of text.\n"
+        f"If they are unrelated, reply with 'No Connection'.\n"
+        f"If they are related, write a 1-sentence insight explaining the link.<|eot_id|>"
+        f"<|start_header_id|>user<|end_header_id|>\n\n"
+        f"Text A: {note_a}\n"
+        f"Text B: {note_b}\n\n"
+        f"What is the connection?<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+    )
+
+    # 3. Inference
+    try:
+        output = llm_local(prompt, max_tokens=150, stop=["<|eot_id|>"])
+        return output["choices"][0]["text"].strip()
+    except Exception as e:
+        return f"Inference Error: {e}"
